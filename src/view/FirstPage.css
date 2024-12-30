@@ -8,12 +8,10 @@
   }
   
   header {
-    background-color: #007bff; /* 航空蓝 */
-    width: 100%;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    padding: 1rem;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
   
   .content {
@@ -29,7 +27,10 @@
     height: 100%;
     width: 200px;
     gap: 10px;
-    background-color: #e0e0e0; /* Light Gray */
+    background: white;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    border-radius: 0 15px 15px 0;
+    padding: 20px;
   }
   
   .nav-div {
@@ -41,20 +42,27 @@
     font-size: 16px;
     font-weight: bold;
     color: #333;
-    background-image: linear-gradient(120deg, transparent 50%, #d0d0d0 50%);
-    background-size: 228%;
-    transition: all .4s;
+    background-image: linear-gradient(120deg, #fff 50%, #007bff 50%);
+    background-size: 230%;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    margin-bottom: 5px;
+    border-radius: 8px;
   }
   .nav-div:hover{
     background-position: 100%;
+    color: white;
+    transform: translateX(5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
   .test-div{
-    background-image: linear-gradient(120deg, transparent 50%, gold 50%);
+    background-image: linear-gradient(120deg, #fff 50%, #ffd700 50%);
     background-size: 240%;
     transition: all .4s;
   }
   .test-div:hover{
     background-position: 100%;
+    color: #333;
   }
   main {
     background-color: #f0f0f0; /* Light Gray */
@@ -83,6 +91,51 @@
     text-decoration: none;
     text-transform: uppercase;
     background-image: linear-gradient(120deg, transparent 0%, transparent 50%,  50%);
-    background-size: 220%;
+    background-size: 230%;
     transition: all .4s;
 }
+
+.viewer-container {
+    position: relative;
+    flex: 1;
+    height: calc(100vh - 10px); /* 调整这个值来适应你的header高度 */
+}
+
+.content {
+    display: flex;
+    height: calc(100vh - 60px); /* 调整这个值来适应你的header高度 */
+}
+
+nav {
+    width: 200px; /* 设置导航栏宽度 */
+    min-width: 200px;
+    background-color: #f0f0f0;
+    padding: 20px;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+header {
+    height: 60px; /* 调整header高度 */
+    padding: 10px;
+}
+
+header h1 {
+    font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
+    margin: 30px 0;
+    /* color: #2c3e50; */
+    font-size: 28px;
+    letter-spacing: 10px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    text-align: center;
+}
+
