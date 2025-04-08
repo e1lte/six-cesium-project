@@ -1,13 +1,69 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+    <head>
+        <meta charset="UTF-8" />
+        <link
+            rel="icon"
+            type="image/svg+xml"
+            href="./src/assets/webIcon.webp"
+        />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>飞行器可视化仿真软件</title>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module" src="/src/main.tsx"></script>
+        <script>
+            // Fisher-Yates 算法
+            (function g() {
+                const arr = [100, 200, 300, 400, 500, 600, 700, 800];
+                for (let i = 0; i < arr.length; i++) {
+                    let index = Math.floor(Math.random() * arr.length);
+                    [arr[i], arr[index]] = [arr[index], arr[i]];
+                }
+                console.log(arr);
+            })();
+
+            class Subject {
+                constructor() {
+                    this.observers = [];
+                }
+
+                subscribe(observer) {
+                    this.observers.push(observer);
+                }
+
+                unsubscribe(observer) {
+                    this.observers = this.observers.filter(
+                        obs => obs !== observer
+                    );
+                }
+
+                notify(data) {
+                    this.observers.forEach(observer => observer.update(data));
+                }
+            }
+
+            class Observer {
+                constructor(name) {
+                    this.name = name;
+                }
+                update(data) {
+                    console.log(
+                        `Observer received data: ${this.name + " " + data}`
+                    );
+                }
+            }
+
+            // 使用观察者模式
+            const subject = new Subject();
+            const observer1 = new Observer("X");
+            const observer2 = new Observer("H");
+
+            subject.subscribe(observer1);
+            subject.subscribe(observer2);
+
+            subject.notify("Hello Observers!"); // 输出: Observer received data: Hello Observers!
+        </script>
+    </body>
 </html>
