@@ -4,13 +4,15 @@ import { Viewer, Entity } from "resium";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { ak, BEIJING_POSITION, SHANGHAI_POSITION } from "../config/data.js";
-import { Form } from "./Form.js";
+import { Form } from "./Form.jsx";
 import * as XLSX from "xlsx";
-import { RealTimeTrajectory } from "./RealTimeTrajectory";
+import { RealTimeTrajectory } from "./RealTimeTrajectory.jsx";
+import { ModelSelectionModal } from "./ModelSelectionModal.js";
+import { ModelTypeModal } from "./ModelType.js";
 
 function FirstPage() {
     Cesium.Ion.defaultAccessToken = ak;
-
+    const [showModelTypeModal, setShowModelTypeModal] = useState(false);
     const [position1, setPosition1] = useState(BEIJING_POSITION);
     const [position2, setPosition2] = useState(SHANGHAI_POSITION);
     const [showForm, setShowForm] = useState(false);
@@ -19,12 +21,18 @@ function FirstPage() {
     const [isPlaying, setIsPlaying] = useState(false);
     const targetPathPositionsRef = useRef([]);
     const missilePathPositionsRef = useRef([]);
+    const [showModelModal, setShowModelModal] = useState(false);
+    const [currentModelType, setCurrentModelType] = useState(null);
     const position = Cesium.Cartesian3.fromDegrees(
         position1.longitude,
         position1.latitude,
         500
     );
-
+    // Add to your state
+    const [modelFiles, setModelFiles] = useState({
+        target: null,
+        missile: null,
+    });
     const fileInputRef = useRef(null);
     const missileFileInputRef = useRef(null);
     const elsxRef = useRef(null);
@@ -59,6 +67,10 @@ function FirstPage() {
             console.error("Viewer is not initialized!");
             return;
         }
+        setModelFiles(prev => ({
+            ...prev,
+            [modelType]: file.name,
+        }));
 
         const url = URL.createObjectURL(file);
         const cesiumViewer = viewerRef.current.cesiumElement;
@@ -180,14 +192,14 @@ function FirstPage() {
                         z: row.P_Missile_H || row.height2 || 0,
                     },
                     targetOrientation: {
-                        roll: row.roll || row.Roll || 0,
-                        pitch: row.pitch || row.Pitch || 0,
-                        yaw: row.yaw || row.Yaw || 0,
+                        roll: row.roll || 0,
+                        pitch: row.pitch || 0,
+                        yaw: row.yaw || 0,
                     },
                     missileOrientation: {
-                        roll: row.missile_roll || 0,
-                        pitch: row.missile_pitch || 0,
-                        yaw: row.missile_yaw || 0,
+                        roll: row.Roll || 0,
+                        pitch: row.Pitch || 0,
+                        yaw: row.Yaw || 0,
                     },
                 };
             });
@@ -337,8 +349,7 @@ function FirstPage() {
         targetPathPositionsRef.current = [];
         missilePathPositionsRef.current = [];
     };
-
-    // 修改startAnimation函数，动态更新路径
+    // 修改startAnimation函数
     const startAnimation = () => {
         if (!viewerRef.current || !animationDataRef.current) {
             console.error("Viewer or animation data not ready!");
@@ -390,7 +401,14 @@ function FirstPage() {
             const elapsed =
                 (performance.now() - startTimeRef.current) * speedMultiplier;
             const totalDuration = data[data.length - 1].time;
-            let currentTime = elapsed % totalDuration;
+
+            // 如果动画完成，停止动画
+            if (elapsed >= totalDuration) {
+                stopAnimation();
+                return;
+            }
+
+            let currentTime = elapsed;
 
             let currentIndex = 0;
             for (let i = 0; i < data.length; i++) {
@@ -484,6 +502,18 @@ function FirstPage() {
         animationFrameIdRef.current = requestAnimationFrame(animate);
     };
 
+    // 修改toggleAnimation函数
+    const toggleAnimation = () => {
+        if (isPlaying) {
+            stopAnimation();
+        } else {
+            // 重置路径和动画状态
+            targetPathPositionsRef.current = [];
+            missilePathPositionsRef.current = [];
+            startAnimation();
+        }
+    };
+
     // 停止动画
     const stopAnimation = () => {
         if (animationFrameIdRef.current) {
@@ -511,6 +541,10 @@ function FirstPage() {
         };
     }, []);
 
+    const handleSimulationClick = modelType => {
+        setCurrentModelType(modelType);
+        setShowModelModal(true);
+    };
     // 调整速度
     const adjustSpeed = multiplier => {
         setSpeedMultiplier(multiplier);
@@ -535,6 +569,8 @@ function FirstPage() {
     };
 
     const updateModel = (model, position, orientation, modelType) => {
+        if (!model) return; // 添加模型存在性检查
+
         const cartesianPos = Cesium.Cartesian3.fromDegrees(
             position.x,
             position.y,
@@ -564,23 +600,17 @@ function FirstPage() {
     };
 
     // 处理按钮点击事件
-    // Modify the file input handlers to specify model type
-    const handleSimulationClick = modelType => () => {
-        if (modelType === "target") {
+
+    const handleElsxClick = () => elsxRef.current?.click();
+    const handleSelectLocalModel = () => {
+        setShowModelModal(false);
+        if (currentModelType === "target") {
             fileInputRef.current?.click();
         } else {
             missileFileInputRef.current?.click();
         }
     };
-    const handleElsxClick = () => elsxRef.current?.click();
 
-    const toggleAnimation = () => {
-        if (isPlaying) {
-            stopAnimation();
-        } else {
-            startAnimation();
-        }
-    };
     // 为上面的代码添加辅助函数：
     const getCurrentAnimationData = () => {
         const elapsed =
@@ -597,20 +627,97 @@ function FirstPage() {
 
         return animationDataRef.current[currentIndex];
     };
-    const adjustYaw = degrees => {
-        if (!models[activeModel]) return;
+    const handleSelectExistingModel = () => {
+        setShowModelModal(false);
+        setShowModelTypeModal(true);
+    };
 
+    const handleSelectModelType = async modelType => {
+        setShowModelTypeModal(false);
+
+        if (!currentModelType || !viewerRef.current) return;
+
+        try {
+            // 方法1：使用绝对路径（推荐）
+            const modelUrl = `${window.location.origin}/localModel/${modelType}.glb`;
+            console.log("尝试加载模型:", modelUrl); // 调试用
+
+            // 直接使用URL加载，不转换为File对象
+            await loadModelFromUrl(modelUrl, currentModelType);
+        } catch (error) {
+            console.error("模型加载失败:", error);
+            // 回退到Cesium默认模型
+            const position =
+                currentModelType === "target" ? position1 : position2;
+            createDefaultModel(currentModelType, {
+                x: position.longitude,
+                y: position.latitude,
+                z: currentModelType === "target" ? 500 : 1000,
+            });
+            alert(`模型加载失败，已使用默认模型代替\n错误: ${error.message}`);
+        }
+    };
+
+    // 新增的URL加载方法
+    const loadModelFromUrl = async (url, modelType) => {
+        if (!viewerRef.current?.cesiumElement) {
+            throw new Error("Cesium viewer未初始化");
+        }
+
+        const cesiumViewer = viewerRef.current.cesiumElement;
+
+        // 移除旧模型
+        if (models[modelType]) {
+            cesiumViewer.scene.primitives.remove(models[modelType]);
+        }
+
+        // 使用Cesium的fromGltfAsync直接加载URL
+        const model = await Cesium.Model.fromGltfAsync({
+            url: url,
+            modelMatrix: Cesium.Matrix4.IDENTITY,
+            scale: 10.0,
+        });
+
+        // 设置模型属性
+        model.silhouetteColor =
+            modelType === "target" ? Cesium.Color.YELLOW : Cesium.Color.RED;
+        model.silhouetteSize = 1.0;
+        model.minimumPixelSize = 64;
+
+        cesiumViewer.scene.primitives.add(model);
+
+        // 更新模型引用
+        setModels(prev => ({
+            ...prev,
+            [modelType]: model,
+        }));
+
+        // 初始化位置
+        const initialPos =
+            animationDataRef.current?.[0]?.[`${modelType}Position`] ||
+            (modelType === "target" ? position1 : position2);
+
+        const cartesianPos = Cesium.Cartesian3.fromDegrees(
+            initialPos.x || initialPos.longitude,
+            initialPos.y || initialPos.latitude,
+            initialPos.z || (modelType === "target" ? 500 : 1000)
+        );
+
+        model.modelMatrix = Cesium.Matrix4.fromTranslation(cartesianPos);
+    };
+    const adjustYaw = degrees => {
+        // 移除模型存在性检查，直接更新偏移量
         setOffsets(prev => {
             const newOffsets = {
                 ...prev,
                 [activeModel]: {
                     ...prev[activeModel],
-                    yaw: prev[activeModel].yaw + degrees,
+                    yaw: (prev[activeModel]?.yaw || 0) + degrees,
                 },
             };
 
-            // 立即应用新的偏移量
-            if (animationDataRef.current?.length > 0) {
+            // 如果模型存在，立即应用新的偏移量
+            if (models[activeModel] && animationDataRef.current?.length > 0) {
                 const currentData = isPlaying
                     ? getCurrentAnimationData()
                     : animationDataRef.current[0];
@@ -637,110 +744,136 @@ function FirstPage() {
     };
 
     const adjustPitch = degrees => {
-        if (!models[activeModel]) return;
-
         setOffsets(prev => ({
             ...prev,
             [activeModel]: {
                 ...prev[activeModel],
-                pitch: prev[activeModel].pitch + degrees,
+                pitch: (prev[activeModel]?.pitch || 0) + degrees,
             },
         }));
 
-        const model = models[activeModel];
-        const position = Cesium.Matrix4.getTranslation(
-            model.modelMatrix,
-            new Cesium.Cartesian3()
-        );
-
-        const hpr = new Cesium.HeadingPitchRoll(
-            Cesium.Math.toRadians(offsets[activeModel].yaw),
-            Cesium.Math.toRadians(offsets[activeModel].pitch + degrees),
-            Cesium.Math.toRadians(offsets[activeModel].roll)
-        );
-
-        const quaternion = Cesium.Quaternion.fromHeadingPitchRoll(hpr);
-        model.modelMatrix =
-            Cesium.Matrix4.fromTranslationQuaternionRotationScale(
-                position,
-                quaternion,
-                new Cesium.Cartesian3(1.0, 1.0, 1.0)
+        // 如果模型存在，立即更新
+        if (models[activeModel]) {
+            const model = models[activeModel];
+            const position = Cesium.Matrix4.getTranslation(
+                model.modelMatrix,
+                new Cesium.Cartesian3()
             );
+
+            const hpr = new Cesium.HeadingPitchRoll(
+                Cesium.Math.toRadians(offsets[activeModel]?.yaw || 0),
+                Cesium.Math.toRadians(
+                    (offsets[activeModel]?.pitch || 0) + degrees
+                ),
+                Cesium.Math.toRadians(offsets[activeModel]?.roll || 0)
+            );
+
+            const quaternion = Cesium.Quaternion.fromHeadingPitchRoll(hpr);
+            model.modelMatrix =
+                Cesium.Matrix4.fromTranslationQuaternionRotationScale(
+                    position,
+                    quaternion,
+                    new Cesium.Cartesian3(1.0, 1.0, 1.0)
+                );
+        }
     };
 
     const adjustRoll = degrees => {
-        if (!models[activeModel]) return;
-
         setOffsets(prev => ({
             ...prev,
             [activeModel]: {
                 ...prev[activeModel],
-                roll: prev[activeModel].roll + degrees,
+                roll: (prev[activeModel]?.roll || 0) + degrees,
             },
         }));
 
-        const model = models[activeModel];
-        const position = Cesium.Matrix4.getTranslation(
-            model.modelMatrix,
-            new Cesium.Cartesian3()
-        );
-
-        const hpr = new Cesium.HeadingPitchRoll(
-            Cesium.Math.toRadians(offsets[activeModel].yaw),
-            Cesium.Math.toRadians(offsets[activeModel].pitch),
-            Cesium.Math.toRadians(offsets[activeModel].roll + degrees)
-        );
-
-        const quaternion = Cesium.Quaternion.fromHeadingPitchRoll(hpr);
-        model.modelMatrix =
-            Cesium.Matrix4.fromTranslationQuaternionRotationScale(
-                position,
-                quaternion,
-                new Cesium.Cartesian3(1.0, 1.0, 1.0)
+        // 如果模型存在，立即更新
+        if (models[activeModel]) {
+            const model = models[activeModel];
+            const position = Cesium.Matrix4.getTranslation(
+                model.modelMatrix,
+                new Cesium.Cartesian3()
             );
-    };
-    const resetOrientation = () => {
-        if (!models[activeModel]) return;
 
-        // Reset offsets for the active model
+            const hpr = new Cesium.HeadingPitchRoll(
+                Cesium.Math.toRadians(offsets[activeModel]?.yaw || 0),
+                Cesium.Math.toRadians(offsets[activeModel]?.pitch || 0),
+                Cesium.Math.toRadians(
+                    (offsets[activeModel]?.roll || 0) + degrees
+                )
+            );
+
+            const quaternion = Cesium.Quaternion.fromHeadingPitchRoll(hpr);
+            model.modelMatrix =
+                Cesium.Matrix4.fromTranslationQuaternionRotationScale(
+                    position,
+                    quaternion,
+                    new Cesium.Cartesian3(1.0, 1.0, 1.0)
+                );
+        }
+    };
+
+    const resetOrientation = () => {
+        // 直接重置偏移量，不检查模型是否存在
         setOffsets(prev => ({
             ...prev,
             [activeModel]: { yaw: 0, pitch: 0, roll: 0 },
         }));
 
-        const model = models[activeModel];
-        const position = Cesium.Matrix4.getTranslation(
-            model.modelMatrix,
-            new Cesium.Cartesian3()
-        );
-
-        // Reset to default orientation
-        const quaternion = Cesium.Quaternion.fromHeadingPitchRoll(
-            new Cesium.HeadingPitchRoll(0, 0, 0)
-        );
-
-        model.modelMatrix =
-            Cesium.Matrix4.fromTranslationQuaternionRotationScale(
-                position,
-                quaternion,
-                new Cesium.Cartesian3(1.0, 1.0, 1.0)
+        // 如果模型存在，应用重置
+        if (models[activeModel]) {
+            const model = models[activeModel];
+            const position = Cesium.Matrix4.getTranslation(
+                model.modelMatrix,
+                new Cesium.Cartesian3()
             );
+
+            const quaternion = Cesium.Quaternion.fromHeadingPitchRoll(
+                new Cesium.HeadingPitchRoll(0, 0, 0)
+            );
+
+            model.modelMatrix =
+                Cesium.Matrix4.fromTranslationQuaternionRotationScale(
+                    position,
+                    quaternion,
+                    new Cesium.Cartesian3(1.0, 1.0, 1.0)
+                );
+        }
     };
     const toggleActiveModel = () => {
         setActiveModel(prev => (prev === "target" ? "missile" : "target"));
     };
 
-    const focusFn = () => {
-        if (!viewerRef.current) return;
-        const cesiumViewer = viewerRef.current.cesiumElement;
-        cesiumViewer.camera.flyTo({
-            destination: position,
-            orientation: {
-                heading: Cesium.Math.toRadians(230.0),
-                pitch: Cesium.Math.toRadians(-20.0),
-                roll: 0.0,
-            },
-        });
+    const hoverModel = () => {
+        let container = document.querySelector(".model-list-container");
+
+        if (!container) {
+            container = document.createElement("div");
+            container.className = "model-list-container";
+            document.body.appendChild(container);
+
+            // Close when clicking outside
+            document.addEventListener("click", e => {
+                if (
+                    !container.contains(e.target) &&
+                    e.target.className !== "tool-btn"
+                ) {
+                    container.style.display = "none";
+                }
+            });
+        }
+
+        // Toggle visibility
+        container.style.display =
+            container.style.display === "none" ? "block" : "none";
+
+        // Update content
+        container.innerHTML = `
+          <h3 class="model-list-title">已加载模型</h3>
+            <ul class="model-list">
+                <li>目标模型: ${modelFiles.target || "未加载"}</li>
+                <li>导弹模型: ${modelFiles.missile || "未加载"}</li>
+        `;
     };
 
     return (
@@ -748,10 +881,26 @@ function FirstPage() {
             <header>
                 <h1>飞行器可视化仿真软件</h1>
             </header>
+            {showModelTypeModal && (
+                <ModelTypeModal
+                    onClose={() => setShowModelTypeModal(false)}
+                    onSelectModelType={handleSelectModelType}
+                />
+            )}
+            {showModelModal && (
+                <ModelSelectionModal
+                    onClose={() => setShowModelModal(false)}
+                    onSelectLocal={handleSelectLocalModel}
+                    onSelectExisting={handleSelectExistingModel}
+                />
+            )}
             <div className="content">
                 <nav>
                     <div className="nav-div">
-                        <a href="#" onClick={handleSimulationClick("target")}>
+                        <a
+                            href="#"
+                            onClick={() => handleSimulationClick("target")}
+                        >
                             加载目标模型
                         </a>
                         <input
@@ -765,7 +914,10 @@ function FirstPage() {
                         />
                     </div>
                     <div className="nav-div">
-                        <a href="#" onClick={handleSimulationClick("missile")}>
+                        <a
+                            href="#"
+                            onClick={() => handleSimulationClick("missile")}
+                        >
                             加载导弹模型
                         </a>
                         <input
@@ -827,8 +979,8 @@ function FirstPage() {
                 </main>
             </div>
             <div className="tool-line">
-                <button className="tool-btn" onClick={focusFn}>
-                    R
+                <button className="tool-btn" onClick={hoverModel}>
+                    Model
                 </button>
                 <button className="tool-btn" onClick={toggleActiveModel}>
                     切换

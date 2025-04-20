@@ -342,3 +342,63 @@ a{
   border-radius: 5px;
   z-index: 999;
 }
+
+
+/* Add to FirstPage.css */
+.model-list-container {
+  position: absolute;
+  bottom: 60px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 5px;
+  padding: 10px;
+  z-index: 9999;
+  color: white;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: Arial, sans-serif;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  display: none;
+}
+
+.model-list-title {
+  margin: 0 0 10px 0;
+  text-align: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.model-item {
+  padding: 8px;
+  border-bottom: 1px solid #444;
+  cursor: pointer;
+}
+
+.model-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+
+.model-type-modal {
+  width: 500px;
+}
+
+.model-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.model-type-btn {
+  background-color: #9C27B0;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.model-type-btn:hover {
+  background-color: #7B1FA2;
+}

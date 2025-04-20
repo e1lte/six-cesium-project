@@ -57,7 +57,7 @@ export function RealTimeTrajectory({ viewerRef, models, setModels }) {
         const position = Cesium.Cartesian3.fromDegrees(
             data.longitude,
             data.latitude,
-            data.altitude
+            data.altitude3
         );
 
         const hpr = new Cesium.HeadingPitchRoll(
