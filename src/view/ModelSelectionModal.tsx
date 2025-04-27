@@ -28,7 +28,7 @@ export function ModelSelectionModal({
                             className="retro-button existing-model-btn pixel-font"
                             onClick={onSelectExisting}
                         >
-                            <span className="button-icon">📦</span> 已有模型
+                            <span className="button-icon">📦</span> 现存模型
                         </button>
                     </div>
                 </div>
