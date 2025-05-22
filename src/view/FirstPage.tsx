@@ -9,7 +9,7 @@ import { RealTimeTrajectory } from "./RealTimeTrajectory.jsx";
 import SimulationConfigModal from "./SimulationConfigModal.tsx";
 import { ModelSelectionModal } from "./ModelSelectionModal.js";
 import { ModelTypeModal } from "./ModelType.js";
-
+import ClassComponent from "./ClassComponent.js";
 function FirstPage() {
     Cesium.Ion.defaultAccessToken = ak;
     // 在FirstPage组件中修改状态
@@ -87,6 +87,130 @@ function FirstPage() {
         models,
         setModels,
     });
+    // 在FirstPage组件中添加以下状态和函数
+
+    const [manualAdjustments, setManualAdjustments] = useState({
+        yaw: 0,
+        pitch: 0,
+        roll: 0,
+    });
+
+    // 从localStorage加载保存的姿态校正
+    const loadSavedAdjustments = modelId => {
+        const saved = localStorage.getItem(`model_adjustments_${modelId}`);
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        return { yaw: 0, pitch: 0, roll: 0 };
+    };
+
+    // 保存姿态校正到localStorage
+    const saveAdjustments = (modelId, adjustments) => {
+        localStorage.setItem(
+            `model_adjustments_${modelId}`,
+            JSON.stringify(adjustments)
+        );
+    };
+
+    // 修改adjustYaw、adjustPitch、adjustRoll函数
+    const adjustYaw = degrees => {
+        const newOffsets = {
+            ...offsets,
+            [activeModel]: {
+                ...offsets[activeModel],
+                yaw: (offsets[activeModel]?.yaw || 0) + degrees,
+            },
+        };
+        setOffsets(newOffsets);
+        saveAdjustments(activeModel, newOffsets[activeModel]);
+    };
+
+    const adjustPitch = degrees => {
+        const newOffsets = {
+            ...offsets,
+            [activeModel]: {
+                ...offsets[activeModel],
+                pitch: (offsets[activeModel]?.pitch || 0) + degrees,
+            },
+        };
+        setOffsets(newOffsets);
+        saveAdjustments(activeModel, newOffsets[activeModel]);
+    };
+
+    const adjustRoll = degrees => {
+        const newOffsets = {
+            ...offsets,
+            [activeModel]: {
+                ...offsets[activeModel],
+                roll: (offsets[activeModel]?.roll || 0) + degrees,
+            },
+        };
+        setOffsets(newOffsets);
+        saveAdjustments(activeModel, newOffsets[activeModel]);
+    };
+
+    // 修改resetOrientation函数
+    const resetOrientation = () => {
+        const newOffsets = {
+            ...offsets,
+            [activeModel]: { yaw: 0, pitch: 0, roll: 0 },
+        };
+        setOffsets(newOffsets);
+        saveAdjustments(activeModel, newOffsets[activeModel]);
+
+        if (models[activeModel]) {
+            const model = models[activeModel];
+            const position = Cesium.Matrix4.getTranslation(
+                model.modelMatrix,
+                new Cesium.Cartesian3()
+            );
+
+            const quaternion = Cesium.Quaternion.fromHeadingPitchRoll(
+                new Cesium.HeadingPitchRoll(0, 0, 0)
+            );
+
+            model.modelMatrix =
+                Cesium.Matrix4.fromTranslationQuaternionRotationScale(
+                    position,
+                    quaternion,
+                    new Cesium.Cartesian3(1.0, 1.0, 1.0)
+                );
+        }
+    };
+
+    // 添加手动输入调整值的函数
+    const handleManualAdjustment = (axis, value) => {
+        const numValue = parseFloat(value) || 0;
+        const newAdjustments = {
+            ...manualAdjustments,
+            [axis]: numValue,
+        };
+        setManualAdjustments(newAdjustments);
+    };
+
+    // 应用手动输入的调整值
+    const applyManualAdjustment = () => {
+        const newOffsets = {
+            ...offsets,
+            [activeModel]: {
+                yaw: manualAdjustments.yaw,
+                pitch: manualAdjustments.pitch,
+                roll: manualAdjustments.roll,
+            },
+        };
+        setOffsets(newOffsets);
+        saveAdjustments(activeModel, newOffsets[activeModel]);
+    };
+
+    // 在组件初始化时加载保存的姿态
+    useEffect(() => {
+        const savedOffsets = {};
+        for (let i = 1; i <= 8; i++) {
+            const modelId = `model${i}`;
+            savedOffsets[modelId] = loadSavedAdjustments(modelId);
+        }
+        setOffsets(savedOffsets);
+    }, []);
 
     const loadModel = async (file, modelId = "model1") => {
         if (!viewerRef.current || !viewerRef.current.cesiumElement) {
@@ -507,63 +631,6 @@ function FirstPage() {
 
         model.modelMatrix = Cesium.Matrix4.fromTranslation(cartesianPos);
     };
-    const adjustYaw = degrees => {
-        setOffsets(prev => ({
-            ...prev,
-            [activeModel]: {
-                ...prev[activeModel],
-                yaw: (prev[activeModel]?.yaw || 0) + degrees,
-            },
-        }));
-    };
-
-    const adjustPitch = degrees => {
-        setOffsets(prev => ({
-            ...prev,
-            [activeModel]: {
-                ...prev[activeModel],
-                pitch: (prev[activeModel]?.pitch || 0) + degrees,
-            },
-        }));
-    };
-
-    const adjustRoll = degrees => {
-        setOffsets(prev => ({
-            ...prev,
-            [activeModel]: {
-                ...prev[activeModel],
-                roll: (prev[activeModel]?.roll || 0) + degrees,
-            },
-        }));
-    };
-
-    const resetOrientation = () => {
-        // 直接重置偏移量，不检查模型是否存在
-        setOffsets(prev => ({
-            ...prev,
-            [activeModel]: { yaw: 0, pitch: 0, roll: 0 },
-        }));
-
-        // 如果模型存在，应用重置
-        if (models[activeModel]) {
-            const model = models[activeModel];
-            const position = Cesium.Matrix4.getTranslation(
-                model.modelMatrix,
-                new Cesium.Cartesian3()
-            );
-
-            const quaternion = Cesium.Quaternion.fromHeadingPitchRoll(
-                new Cesium.HeadingPitchRoll(0, 0, 0)
-            );
-
-            model.modelMatrix =
-                Cesium.Matrix4.fromTranslationQuaternionRotationScale(
-                    position,
-                    quaternion,
-                    new Cesium.Cartesian3(1.0, 1.0, 1.0)
-                );
-        }
-    };
 
     const hoverModel = () => {
         let container = document.querySelector(".model-list-container");
@@ -745,6 +812,43 @@ function FirstPage() {
             <header>
                 <h1>飞行器可视化仿真软件</h1>
             </header>
+
+            <div className="manual-adjustment-panel">
+                <h4>调整姿态</h4>
+                <div className="adjustment-inputs">
+                    <div>
+                        <label>Yaw:</label>
+                        <input
+                            type="number"
+                            value={manualAdjustments.yaw}
+                            onChange={e =>
+                                handleManualAdjustment("yaw", e.target.value)
+                            }
+                        />
+                    </div>
+                    <div>
+                        <label>Pitch:</label>
+                        <input
+                            type="number"
+                            value={manualAdjustments.pitch}
+                            onChange={e =>
+                                handleManualAdjustment("pitch", e.target.value)
+                            }
+                        />
+                    </div>
+                    <div>
+                        <label>Roll:</label>
+                        <input
+                            type="number"
+                            value={manualAdjustments.roll}
+                            onChange={e =>
+                                handleManualAdjustment("roll", e.target.value)
+                            }
+                        />
+                    </div>
+                    <button onClick={applyManualAdjustment}>应用调整</button>
+                </div>
+            </div>
             {showModelTypeModal && (
                 <ModelTypeModal
                     onClose={() => setShowModelTypeModal(false)}
@@ -836,7 +940,7 @@ function FirstPage() {
                 <button className="tool-btn" onClick={() => adjustRoll(-5)}>
                     -Roll
                 </button>
-
+                {/* <ClassComponent></ClassComponent> */}
                 <select
                     className="tool-btn"
                     value={speedMultiplier}

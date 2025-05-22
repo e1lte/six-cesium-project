@@ -678,3 +678,44 @@ a{
 }
 
 
+
+
+.manual-adjustment-panel {
+  position: absolute;
+  bottom: 60px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
+  z-index: 999;
+}
+
+.manual-adjustment-panel h4 {
+  margin: 0 0 10px 0;
+}
+
+.adjustment-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.adjustment-inputs div {
+  display: flex;
+  align-items: center;
+}
+
+.adjustment-inputs label {
+  width: 50px;
+}
+
+.adjustment-inputs input {
+  width: 60px;
+  margin-left: 5px;
+}
+
+.adjustment-inputs button {
+  margin-top: 5px;
+  padding: 3px 10px;
+}
