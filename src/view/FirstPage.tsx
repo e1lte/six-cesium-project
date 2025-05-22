@@ -5,11 +5,13 @@ import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { ak, BEIJING_POSITION, SHANGHAI_POSITION } from "../config/data.js";
 import * as XLSX from "xlsx";
-import { RealTimeTrajectory } from "./RealTimeTrajectory.jsx";
+// import { RealTimeTrajectory } from "./RealTimeTrajectory.js";
 import SimulationConfigModal from "./SimulationConfigModal.tsx";
 import { ModelSelectionModal } from "./ModelSelectionModal.js";
 import { ModelTypeModal } from "./ModelType.js";
 import ClassComponent from "./ClassComponent.js";
+import RealTimeSimulationModal from "./RealTimeSimulationModal.tsx";
+
 function FirstPage() {
     Cesium.Ion.defaultAccessToken = ak;
     // 在FirstPage组件中修改状态
@@ -81,13 +83,13 @@ function FirstPage() {
 
     const [activeModel, setActiveModel] = useState("target"); // 'target' or 'missile'
 
-    // 使用实时轨迹组件
-    const { isRealTime, connectWebSocket } = RealTimeTrajectory({
-        viewerRef,
-        models,
-        setModels,
-    });
-    // 在FirstPage组件中添加以下状态和函数
+    // // 使用实时轨迹组件
+    // const { isRealTime, connectWebSocket } = RealTimeTrajectory({
+    //     viewerRef,
+    //     models,
+    //     setModels,
+    // });
+    // // 在FirstPage组件中添加以下状态和函数
 
     const [manualAdjustments, setManualAdjustments] = useState({
         yaw: 0,
@@ -1050,6 +1052,62 @@ function FirstPage() {
         setShowAttitudePanel(!showAttitudePanel);
     };
 
+    // 在FirstPage组件中添加状态
+    const [showRealTimeModal, setShowRealTimeModal] = useState(false);
+    const [realTimeModels, setRealTimeModels] = useState({
+        model1: null,
+        model2: null,
+    });
+    const [isRealTimeActive, setIsRealTimeActive] = useState(false);
+    const websocketRef = useRef(null);
+
+    // 处理实时仿真
+    const handleStartRealTimeSimulation = modelEntities => {
+        setRealTimeModels(modelEntities);
+        setIsRealTimeActive(true);
+
+        // 设置摄像机到模型位置
+        if (viewerRef.current?.cesiumElement && modelEntities.model1) {
+            const position = Cesium.Matrix4.getTranslation(
+                modelEntities.model1.modelMatrix,
+                new Cesium.Cartesian3()
+            );
+
+            viewerRef.current.cesiumElement.camera.flyTo({
+                destination: Cesium.Cartesian3.add(
+                    position,
+                    new Cesium.Cartesian3(0, -500, 300),
+                    new Cesium.Cartesian3()
+                ),
+                orientation: {
+                    heading: Cesium.Math.toRadians(0),
+                    pitch: Cesium.Math.toRadians(-30),
+                    roll: 0,
+                },
+            });
+        }
+    };
+
+    // 停止实时仿真
+    const stopRealTimeSimulation = () => {
+        setIsRealTimeActive(false);
+
+        // 移除模型
+        if (viewerRef.current?.cesiumElement) {
+            const cesiumViewer = viewerRef.current.cesiumElement;
+
+            if (realTimeModels.model1) {
+                cesiumViewer.scene.primitives.remove(realTimeModels.model1);
+            }
+
+            if (realTimeModels.model2) {
+                cesiumViewer.scene.primitives.remove(realTimeModels.model2);
+            }
+        }
+
+        setRealTimeModels({ model1: null, model2: null });
+    };
+
     return (
         <div className="container">
             <header>
@@ -1176,10 +1234,14 @@ function FirstPage() {
                         <a
                             href="#"
                             onClick={() => {
-                                connectWebSocket();
+                                if (isRealTimeActive) {
+                                    stopRealTimeSimulation();
+                                } else {
+                                    setShowRealTimeModal(true);
+                                }
                             }}
                         >
-                            {isRealTime ? "停止实时" : "实时仿真"}
+                            {isRealTimeActive ? "停止实时仿真" : "实时仿真"}
                         </a>
                     </div>
                 </nav>
@@ -1232,6 +1294,14 @@ function FirstPage() {
                 </button>
             </div>
             <div id="dataPanel">Waiting for data...</div>
+            {showRealTimeModal && (
+                <RealTimeSimulationModal
+                    isOpen={showRealTimeModal}
+                    onClose={() => setShowRealTimeModal(false)}
+                    onStartSimulation={handleStartRealTimeSimulation}
+                    viewerRef={viewerRef}
+                />
+            )}
         </div>
     );
 }
