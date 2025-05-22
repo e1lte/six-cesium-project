@@ -1042,88 +1042,130 @@ function FirstPage() {
         alert(`已保存模型"${modelFileName}"的姿态设置`);
     };
 
+    // 添加一个状态用于控制姿态面板的显示/隐藏
+    const [showAttitudePanel, setShowAttitudePanel] = useState(false);
+
+    // 切换姿态面板显示/隐藏的函数
+    const toggleAttitudePanel = () => {
+        setShowAttitudePanel(!showAttitudePanel);
+    };
+
     return (
         <div className="container">
             <header>
                 <h1>飞行器可视化仿真软件</h1>
             </header>
-
-            <div className="manual-adjustment-panel">
-                <h4>调整模型姿态 - {activeModel}</h4>
-                <div className="adjustment-inputs">
-                    <div>
-                        <label>偏航角(Yaw):</label>
-                        <input
-                            type="number"
-                            value={manualAdjustments.yaw}
-                            onChange={e =>
-                                handleManualAdjustment("yaw", e.target.value)
-                            }
-                            step="1"
-                        />
-                        <div className="adjustment-buttons">
-                            <button onClick={() => adjustYaw(-5)}>-5°</button>
-                            <button onClick={() => adjustYaw(-1)}>-1°</button>
-                            <button onClick={() => adjustYaw(1)}>+1°</button>
-                            <button onClick={() => adjustYaw(5)}>+5°</button>
+            {showAttitudePanel && (
+                <div className="manual-adjustment-panel">
+                    <h4>调整模型姿态 - {activeModel}</h4>
+                    <div className="adjustment-inputs">
+                        <div>
+                            <label>偏航角(Yaw):</label>
+                            <input
+                                type="number"
+                                value={manualAdjustments.yaw}
+                                onChange={e =>
+                                    handleManualAdjustment(
+                                        "yaw",
+                                        e.target.value
+                                    )
+                                }
+                                step="1"
+                            />
+                            <div className="adjustment-buttons">
+                                <button onClick={() => adjustYaw(-5)}>
+                                    -5°
+                                </button>
+                                <button onClick={() => adjustYaw(-1)}>
+                                    -1°
+                                </button>
+                                <button onClick={() => adjustYaw(1)}>
+                                    +1°
+                                </button>
+                                <button onClick={() => adjustYaw(5)}>
+                                    +5°
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <label>俯仰角(Pitch):</label>
-                        <input
-                            type="number"
-                            value={manualAdjustments.pitch}
-                            onChange={e =>
-                                handleManualAdjustment("pitch", e.target.value)
-                            }
-                            step="1"
-                        />
-                        <div className="adjustment-buttons">
-                            <button onClick={() => adjustPitch(-5)}>-5°</button>
-                            <button onClick={() => adjustPitch(-1)}>-1°</button>
-                            <button onClick={() => adjustPitch(1)}>+1°</button>
-                            <button onClick={() => adjustPitch(5)}>+5°</button>
+                        <div>
+                            <label>俯仰角(Pitch):</label>
+                            <input
+                                type="number"
+                                value={manualAdjustments.pitch}
+                                onChange={e =>
+                                    handleManualAdjustment(
+                                        "pitch",
+                                        e.target.value
+                                    )
+                                }
+                                step="1"
+                            />
+                            <div className="adjustment-buttons">
+                                <button onClick={() => adjustPitch(-5)}>
+                                    -5°
+                                </button>
+                                <button onClick={() => adjustPitch(-1)}>
+                                    -1°
+                                </button>
+                                <button onClick={() => adjustPitch(1)}>
+                                    +1°
+                                </button>
+                                <button onClick={() => adjustPitch(5)}>
+                                    +5°
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <label>滚转角(Roll):</label>
-                        <input
-                            type="number"
-                            value={manualAdjustments.roll}
-                            onChange={e =>
-                                handleManualAdjustment("roll", e.target.value)
-                            }
-                            step="1"
-                        />
-                        <div className="adjustment-buttons">
-                            <button onClick={() => adjustRoll(-5)}>-5°</button>
-                            <button onClick={() => adjustRoll(-1)}>-1°</button>
-                            <button onClick={() => adjustRoll(1)}>+1°</button>
-                            <button onClick={() => adjustRoll(5)}>+5°</button>
+                        <div>
+                            <label>滚转角(Roll):</label>
+                            <input
+                                type="number"
+                                value={manualAdjustments.roll}
+                                onChange={e =>
+                                    handleManualAdjustment(
+                                        "roll",
+                                        e.target.value
+                                    )
+                                }
+                                step="1"
+                            />
+                            <div className="adjustment-buttons">
+                                <button onClick={() => adjustRoll(-5)}>
+                                    -5°
+                                </button>
+                                <button onClick={() => adjustRoll(-1)}>
+                                    -1°
+                                </button>
+                                <button onClick={() => adjustRoll(1)}>
+                                    +1°
+                                </button>
+                                <button onClick={() => adjustRoll(5)}>
+                                    +5°
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div className="adjustment-actions">
-                        <button
-                            onClick={applyManualAdjustment}
-                            className="apply-button"
-                        >
-                            应用调整
-                        </button>
-                        <button
-                            onClick={resetOrientation}
-                            className="reset-button"
-                        >
-                            重置姿态
-                        </button>
-                        <button
-                            onClick={saveModelOrientation}
-                            className="save-button"
-                        >
-                            保存设置
-                        </button>
+                        <div className="adjustment-actions">
+                            <button
+                                onClick={applyManualAdjustment}
+                                className="apply-button"
+                            >
+                                应用调整
+                            </button>
+                            <button
+                                onClick={resetOrientation}
+                                className="reset-button"
+                            >
+                                重置姿态
+                            </button>
+                            <button
+                                onClick={saveModelOrientation}
+                                className="save-button"
+                            >
+                                保存设置
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
             {showModelTypeModal && (
                 <ModelTypeModal
                     onClose={() => setShowModelTypeModal(false)}
@@ -1200,24 +1242,6 @@ function FirstPage() {
                     ))}
                 </select>
 
-                <button className="tool-btn" onClick={() => adjustYaw(10)}>
-                    +Yaw
-                </button>
-                <button className="tool-btn" onClick={() => adjustYaw(-10)}>
-                    -Yaw
-                </button>
-                <button className="tool-btn" onClick={() => adjustPitch(5)}>
-                    +Pitch
-                </button>
-                <button className="tool-btn" onClick={() => adjustPitch(-5)}>
-                    -Pitch
-                </button>
-                <button className="tool-btn" onClick={() => adjustRoll(5)}>
-                    +Roll
-                </button>
-                <button className="tool-btn" onClick={() => adjustRoll(-5)}>
-                    -Roll
-                </button>
                 {/* <ClassComponent></ClassComponent> */}
                 <select
                     className="tool-btn"
@@ -1231,6 +1255,12 @@ function FirstPage() {
                     ))}
                 </select>
 
+                <button
+                    className={`tool-btn ${showAttitudePanel ? "active" : ""}`}
+                    onClick={toggleAttitudePanel}
+                >
+                    姿态
+                </button>
                 <button className="tool-btn" onClick={resetOrientation}>
                     复位
                 </button>

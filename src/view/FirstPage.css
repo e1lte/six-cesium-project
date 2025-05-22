@@ -220,7 +220,7 @@ header h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 1050px;
+  width: 350px;
   height: 60px;
   margin-left: 200px;
   /* background: linear-gradient(145deg, #003d6b, #0062a3);  */
@@ -691,6 +691,7 @@ a{
   top: 70px;
   right: 10px;
   z-index: 100;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 .manual-adjustment-panel h4 {
@@ -772,4 +773,14 @@ a{
 
 .save-button:hover {
   background-color: #0069d9;
+}
+
+.tool-btn.active {
+  background-color: #2a6;
+  color: white;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
