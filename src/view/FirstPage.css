@@ -681,41 +681,101 @@ a{
 
 
 .manual-adjustment-panel {
-  position: absolute;
-  bottom: 60px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 10px;
-  border-radius: 5px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  padding: 12px;
   color: white;
-  z-index: 999;
+  margin-bottom: 10px;
+  max-width: 400px;
+  position: absolute;
+  top: 70px;
+  right: 10px;
+  z-index: 100;
 }
 
 .manual-adjustment-panel h4 {
-  margin: 0 0 10px 0;
+  margin-top: 0;
+  color: #ffcc00;
+  border-bottom: 1px solid #ffcc00;
+  padding-bottom: 5px;
 }
 
 .adjustment-inputs {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+}
+
+.adjustment-inputs > div {
+  display: flex;
+  flex-direction: column;
   gap: 5px;
 }
 
-.adjustment-inputs div {
-  display: flex;
-  align-items: center;
-}
-
 .adjustment-inputs label {
-  width: 50px;
+  font-weight: bold;
+  color: #ffcc00;
 }
 
 .adjustment-inputs input {
-  width: 60px;
-  margin-left: 5px;
+  padding: 5px;
+  border-radius: 4px;
+  border: 1px solid #555;
+  background-color: #333;
+  color: white;
+  width: 100%;
 }
 
-.adjustment-inputs button {
-  margin-top: 5px;
-  padding: 3px 10px;
+.adjustment-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.adjustment-buttons button {
+  flex: 1;
+  padding: 3px 0;
+  background-color: #444;
+  border: 1px solid #666;
+  color: white;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.adjustment-buttons button:hover {
+  background-color: #555;
+}
+
+.adjustment-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.apply-button {
+  flex: 2;
+  padding: 8px;
+  background-color: #2a6;
+  border: none;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.reset-button {
+  flex: 1;
+  padding: 8px;
+  background-color: #f55;
+  border: none;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.apply-button:hover {
+  background-color: #3b7;
+}
+
+.reset-button:hover {
+  background-color: #f66;
 }

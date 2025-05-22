@@ -95,6 +95,9 @@ function FirstPage() {
         roll: 0,
     });
 
+    // 在状态部分添加选中模型的高亮状态
+    const [activeModelEntity, setActiveModelEntity] = useState(null);
+
     // 从localStorage加载保存的姿态校正
     const loadSavedAdjustments = modelId => {
         const saved = localStorage.getItem(`model_adjustments_${modelId}`);
@@ -188,7 +191,56 @@ function FirstPage() {
         setManualAdjustments(newAdjustments);
     };
 
-    // 应用手动输入的调整值
+    // 修改选择模型的函数
+    const selectModel = modelId => {
+        // 移除之前选中模型的高亮效果
+        if (activeModelEntity && models[activeModel]) {
+            models[activeModel].silhouetteColor = Cesium.Color.WHITE;
+            models[activeModel].silhouetteSize = 0.0;
+        }
+
+        // 设置新选中的模型
+        setActiveModel(modelId);
+
+        // 加载该模型已保存的姿态调整值
+        const savedAdjustment = loadSavedAdjustments(modelId);
+        setManualAdjustments({
+            yaw: savedAdjustment.yaw || 0,
+            pitch: savedAdjustment.pitch || 0,
+            roll: savedAdjustment.roll || 0,
+        });
+
+        // 高亮显示选中的模型
+        if (models[modelId]) {
+            models[modelId].silhouetteColor = Cesium.Color.GOLD;
+            models[modelId].silhouetteSize = 2.0;
+            setActiveModelEntity(models[modelId]);
+
+            // 将相机移动到模型位置
+            if (viewerRef.current?.cesiumElement) {
+                const modelPosition = Cesium.Matrix4.getTranslation(
+                    models[modelId].modelMatrix,
+                    new Cesium.Cartesian3()
+                );
+
+                viewerRef.current.cesiumElement.camera.flyTo({
+                    destination: Cesium.Cartesian3.add(
+                        modelPosition,
+                        new Cesium.Cartesian3(0, -100, 50),
+                        new Cesium.Cartesian3()
+                    ),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0),
+                        pitch: Cesium.Math.toRadians(-20),
+                        roll: 0,
+                    },
+                    duration: 1.0,
+                });
+            }
+        }
+    };
+
+    // 修改应用手动输入的调整值函数
     const applyManualAdjustment = () => {
         const newOffsets = {
             ...offsets,
@@ -200,6 +252,32 @@ function FirstPage() {
         };
         setOffsets(newOffsets);
         saveAdjustments(activeModel, newOffsets[activeModel]);
+
+        // 立即应用姿态到模型
+        if (models[activeModel]) {
+            const model = models[activeModel];
+            const position = Cesium.Matrix4.getTranslation(
+                model.modelMatrix,
+                new Cesium.Cartesian3()
+            );
+
+            // 计算旋转矩阵
+            const hpr = new Cesium.HeadingPitchRoll(
+                Cesium.Math.toRadians(manualAdjustments.yaw),
+                Cesium.Math.toRadians(manualAdjustments.pitch),
+                Cesium.Math.toRadians(manualAdjustments.roll)
+            );
+
+            const quaternion = Cesium.Quaternion.fromHeadingPitchRoll(hpr);
+
+            // 更新模型矩阵
+            model.modelMatrix =
+                Cesium.Matrix4.fromTranslationQuaternionRotationScale(
+                    position,
+                    quaternion,
+                    new Cesium.Cartesian3(1.0, 1.0, 1.0)
+                );
+        }
     };
 
     // 在组件初始化时加载保存的姿态
@@ -214,7 +292,7 @@ function FirstPage() {
 
     const loadModel = async (file, modelId = "model1") => {
         if (!viewerRef.current || !viewerRef.current.cesiumElement) {
-            console.error("Viewer is not initialized!");
+            console.error("Viewer未初始化!");
             return;
         }
 
@@ -227,17 +305,32 @@ function FirstPage() {
         const cesiumViewer = viewerRef.current.cesiumElement;
 
         try {
-            // Remove old model
+            // 移除旧模型
             if (models[modelId]) {
                 cesiumViewer.scene.primitives.remove(models[modelId]);
             }
 
-            // 使用默认位置
-            const initialPosition = Cesium.Cartesian3.fromDegrees(
-                116.3 + Math.random() * 0.1, // 随机位置防止重叠
-                39.9 + Math.random() * 0.1,
-                500
-            );
+            // 初始化位置 - 从动画数据中获取
+            let initialPosition;
+            if (
+                animationDataRef.current &&
+                animationDataRef.current.length > 0 &&
+                animationDataRef.current[0].positions[modelId]
+            ) {
+                const pos = animationDataRef.current[0].positions[modelId];
+                initialPosition = Cesium.Cartesian3.fromDegrees(
+                    pos.x,
+                    pos.y,
+                    pos.z
+                );
+            } else {
+                // 默认位置作为备选
+                initialPosition = Cesium.Cartesian3.fromDegrees(
+                    116.3 + Math.random() * 0.1, // 随机位置防止重叠
+                    39.9 + Math.random() * 0.1,
+                    500
+                );
+            }
 
             const model = await Cesium.Model.fromGltfAsync({
                 url: url,
@@ -262,15 +355,23 @@ function FirstPage() {
                 [modelId]: model,
             }));
 
-            // 准备动画路径
+            // 如果有姿态数据，应用初始姿态
             if (
                 animationDataRef.current &&
-                animationDataRef.current.length > 0
+                animationDataRef.current.length > 0 &&
+                animationDataRef.current[0].orientations[modelId]
             ) {
-                prepareAnimation();
+                const orientation =
+                    animationDataRef.current[0].orientations[modelId];
+                updateModel(
+                    model,
+                    animationDataRef.current[0].positions[modelId],
+                    orientation,
+                    modelId
+                );
             }
         } catch (error) {
-            console.error("An error occurred while loading the model:", error);
+            console.error("加载模型时出错:", error);
         } finally {
             URL.revokeObjectURL(url);
         }
@@ -520,6 +621,7 @@ function FirstPage() {
         };
     };
 
+    // 修改updateModel函数，加入姿态调整
     const updateModel = (model, position, orientation, modelType) => {
         if (!model) return;
 
@@ -536,7 +638,7 @@ function FirstPage() {
             roll: 0,
         };
 
-        // 应用偏移量到方向
+        // 应用偏移量到方向，合并轨迹中的姿态和用户设置的偏移
         const hpr = new Cesium.HeadingPitchRoll(
             Cesium.Math.toRadians(orientation.yaw + currentOffsets.yaw),
             Cesium.Math.toRadians(orientation.pitch + currentOffsets.pitch),
@@ -694,14 +796,28 @@ function FirstPage() {
                             },
                             orientations: {
                                 model1: {
-                                    roll: row.roll || 0,
-                                    pitch: row.pitch || 0,
-                                    yaw: row.yaw || 0,
+                                    // 优先使用原始姿态数据，没有则使用0
+                                    roll: parseFloat(row.roll || row.Roll || 0),
+                                    pitch: parseFloat(
+                                        row.pitch || row.Pitch || 0
+                                    ),
+                                    yaw: parseFloat(
+                                        row.yaw || row.Yaw || row.heading || 0
+                                    ),
                                 },
                                 model2: {
-                                    roll: row.Roll || 0,
-                                    pitch: row.Pitch || 0,
-                                    yaw: row.Yaw || 0,
+                                    roll: parseFloat(
+                                        row.missile_roll || row.Roll || 0
+                                    ),
+                                    pitch: parseFloat(
+                                        row.missile_pitch || row.Pitch || 0
+                                    ),
+                                    yaw: parseFloat(
+                                        row.missile_yaw ||
+                                            row.Yaw ||
+                                            row.heading ||
+                                            0
+                                    ),
                                 },
                             },
                         };
@@ -763,36 +879,90 @@ function FirstPage() {
     };
     const loadConfiguration = async configs => {
         try {
-            // 加载所有模型
-            for (let i = 0; i < configs.length; i++) {
-                const config = configs[i];
-                const model1Id = `model${i * 2 + 1}`;
-                const model2Id = `model${i * 2 + 2}`;
-
-                if (config.targetModelFile) {
-                    await loadModel(config.targetModelFile, model1Id);
-                }
-                if (config.missileModelFile) {
-                    await loadModel(config.missileModelFile, model2Id);
-                }
-            }
-            console.log("configs1", configs, typeof configs);
-            // 加载所有轨迹数据
+            // 加载所有轨迹数据先获取初始位置
             const allTrajectoryData = await Promise.all(
                 configs
                     .filter(config => config.trajectoryFile)
                     .map(config => parseTrajectoryFile(config.trajectoryFile))
             );
 
+            // 合并所有轨迹数据
+            let combinedData = [];
             if (allTrajectoryData.length > 0) {
-                // 合并所有轨迹数据
-                const combinedData = combineTrajectoryData(allTrajectoryData);
+                combinedData = combineTrajectoryData(allTrajectoryData);
                 setSixDofData(combinedData);
                 animationDataRef.current = combinedData;
+            }
+
+            // 初始化位置信息
+            let firstModelPosition = null;
+
+            // 加载所有模型并设置初始位置
+            for (let i = 0; i < configs.length; i++) {
+                const config = configs[i];
+                const model1Id = `model${i * 2 + 1}`;
+                const model2Id = `model${i * 2 + 2}`;
+
+                // 从轨迹数据中获取初始位置
+                if (combinedData.length > 0) {
+                    const firstFrame = combinedData[0];
+
+                    // 加载目标模型并设置位置
+                    if (
+                        config.targetModelFile &&
+                        firstFrame.positions[model1Id]
+                    ) {
+                        await loadModel(config.targetModelFile, model1Id);
+
+                        // 记录第一个模型的位置用于相机定位
+                        if (firstModelPosition === null) {
+                            firstModelPosition = firstFrame.positions[model1Id];
+                        }
+                    }
+
+                    // 加载导弹模型并设置位置
+                    if (
+                        config.missileModelFile &&
+                        firstFrame.positions[model2Id]
+                    ) {
+                        await loadModel(config.missileModelFile, model2Id);
+                    }
+                } else {
+                    // 没有轨迹数据时，使用默认位置
+                    if (config.targetModelFile) {
+                        await loadModel(config.targetModelFile, model1Id);
+                    }
+                    if (config.missileModelFile) {
+                        await loadModel(config.missileModelFile, model2Id);
+                    }
+                }
+            }
+
+            // 准备动画路径
+            if (combinedData.length > 0) {
                 prepareAnimation();
+
+                // 相机飞行到第一个模型位置
+                if (firstModelPosition && viewerRef.current?.cesiumElement) {
+                    const destination = Cesium.Cartesian3.fromDegrees(
+                        firstModelPosition.x,
+                        firstModelPosition.y,
+                        firstModelPosition.z + 1000 // 高度增加1000米以便观察
+                    );
+
+                    viewerRef.current.cesiumElement.camera.flyTo({
+                        destination: destination,
+                        orientation: {
+                            heading: 0.0,
+                            pitch: -Math.PI / 4, // 俯视角度
+                            roll: 0.0,
+                        },
+                        duration: 2.0, // 飞行时间2秒
+                    });
+                }
             }
         } catch (error) {
-            console.error("Error loading configuration:", error);
+            console.error("加载配置时出错:", error);
         }
     };
     const toggleAnimation = () => {
@@ -814,39 +984,73 @@ function FirstPage() {
             </header>
 
             <div className="manual-adjustment-panel">
-                <h4>调整姿态</h4>
+                <h4>调整模型姿态 - {activeModel}</h4>
                 <div className="adjustment-inputs">
                     <div>
-                        <label>Yaw:</label>
+                        <label>偏航角(Yaw):</label>
                         <input
                             type="number"
                             value={manualAdjustments.yaw}
                             onChange={e =>
                                 handleManualAdjustment("yaw", e.target.value)
                             }
+                            step="1"
                         />
+                        <div className="adjustment-buttons">
+                            <button onClick={() => adjustYaw(-5)}>-5°</button>
+                            <button onClick={() => adjustYaw(-1)}>-1°</button>
+                            <button onClick={() => adjustYaw(1)}>+1°</button>
+                            <button onClick={() => adjustYaw(5)}>+5°</button>
+                        </div>
                     </div>
                     <div>
-                        <label>Pitch:</label>
+                        <label>俯仰角(Pitch):</label>
                         <input
                             type="number"
                             value={manualAdjustments.pitch}
                             onChange={e =>
                                 handleManualAdjustment("pitch", e.target.value)
                             }
+                            step="1"
                         />
+                        <div className="adjustment-buttons">
+                            <button onClick={() => adjustPitch(-5)}>-5°</button>
+                            <button onClick={() => adjustPitch(-1)}>-1°</button>
+                            <button onClick={() => adjustPitch(1)}>+1°</button>
+                            <button onClick={() => adjustPitch(5)}>+5°</button>
+                        </div>
                     </div>
                     <div>
-                        <label>Roll:</label>
+                        <label>滚转角(Roll):</label>
                         <input
                             type="number"
                             value={manualAdjustments.roll}
                             onChange={e =>
                                 handleManualAdjustment("roll", e.target.value)
                             }
+                            step="1"
                         />
+                        <div className="adjustment-buttons">
+                            <button onClick={() => adjustRoll(-5)}>-5°</button>
+                            <button onClick={() => adjustRoll(-1)}>-1°</button>
+                            <button onClick={() => adjustRoll(1)}>+1°</button>
+                            <button onClick={() => adjustRoll(5)}>+5°</button>
+                        </div>
                     </div>
-                    <button onClick={applyManualAdjustment}>应用调整</button>
+                    <div className="adjustment-actions">
+                        <button
+                            onClick={applyManualAdjustment}
+                            className="apply-button"
+                        >
+                            应用调整
+                        </button>
+                        <button
+                            onClick={resetOrientation}
+                            className="reset-button"
+                        >
+                            重置姿态
+                        </button>
+                    </div>
                 </div>
             </div>
             {showModelTypeModal && (
@@ -913,11 +1117,14 @@ function FirstPage() {
                 <select
                     className="tool-btn"
                     value={activeModel}
-                    onChange={e => setActiveModel(e.target.value)}
+                    onChange={e => selectModel(e.target.value)}
                 >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                         <option key={`model${i}`} value={`model${i}`}>
-                            模型 {i}
+                            模型 {i}{" "}
+                            {modelFiles[`model${i}`]
+                                ? `- ${modelFiles[`model${i}`]}`
+                                : ""}
                         </option>
                     ))}
                 </select>
