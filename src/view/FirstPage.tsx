@@ -296,6 +296,7 @@ function FirstPage() {
             return;
         }
 
+        // 更新模型文件名记录
         setModelFiles(prev => ({
             ...prev,
             [modelId]: file.name,
@@ -355,12 +356,48 @@ function FirstPage() {
                 [modelId]: model,
             }));
 
-            // 如果有姿态数据，应用初始姿态
-            if (
+            // 检查是否有保存的姿态设置
+            const savedOrientation = localStorage.getItem(
+                `model_orientation_${file.name}`
+            );
+
+            if (savedOrientation) {
+                // 应用保存的姿态
+                const orientationData = JSON.parse(savedOrientation);
+
+                // 更新偏移量
+                setOffsets(prev => ({
+                    ...prev,
+                    [modelId]: {
+                        yaw: orientationData.yaw || 0,
+                        pitch: orientationData.pitch || 0,
+                        roll: orientationData.roll || 0,
+                    },
+                }));
+
+                // 直接应用保存的姿态角
+                const hpr = new Cesium.HeadingPitchRoll(
+                    Cesium.Math.toRadians(orientationData.yaw || 0),
+                    Cesium.Math.toRadians(orientationData.pitch || 0),
+                    Cesium.Math.toRadians(orientationData.roll || 0)
+                );
+
+                const quaternion = Cesium.Quaternion.fromHeadingPitchRoll(hpr);
+
+                model.modelMatrix =
+                    Cesium.Matrix4.fromTranslationQuaternionRotationScale(
+                        initialPosition,
+                        quaternion,
+                        new Cesium.Cartesian3(1.0, 1.0, 1.0)
+                    );
+
+                console.log(`已应用保存的模型"${file.name}"姿态设置`);
+            } else if (
                 animationDataRef.current &&
                 animationDataRef.current.length > 0 &&
                 animationDataRef.current[0].orientations[modelId]
             ) {
+                // 如果没有保存的姿态，但有轨迹姿态数据，则应用轨迹姿态
                 const orientation =
                     animationDataRef.current[0].orientations[modelId];
                 updateModel(
@@ -977,6 +1014,34 @@ function FirstPage() {
             startAnimation();
         }
     };
+
+    // 添加保存模型姿态的函数
+    const saveModelOrientation = () => {
+        // 获取当前模型的文件名作为标识
+        const modelFileName = modelFiles[activeModel];
+        if (!modelFileName) {
+            alert("当前没有选中有效模型，无法保存姿态设置");
+            return;
+        }
+
+        // 使用模型文件名作为键保存姿态角
+        const orientationData = {
+            yaw: manualAdjustments.yaw,
+            pitch: manualAdjustments.pitch,
+            roll: manualAdjustments.roll,
+            modelId: activeModel,
+        };
+
+        // 保存到localStorage
+        localStorage.setItem(
+            `model_orientation_${modelFileName}`,
+            JSON.stringify(orientationData)
+        );
+
+        // 提示用户
+        alert(`已保存模型"${modelFileName}"的姿态设置`);
+    };
+
     return (
         <div className="container">
             <header>
@@ -1049,6 +1114,12 @@ function FirstPage() {
                             className="reset-button"
                         >
                             重置姿态
+                        </button>
+                        <button
+                            onClick={saveModelOrientation}
+                            className="save-button"
+                        >
+                            保存设置
                         </button>
                     </div>
                 </div>

@@ -747,14 +747,22 @@ a{
 
 .adjustment-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   margin-top: 10px;
 }
 
 .apply-button {
   flex: 2;
+}
+
+.reset-button, .save-button {
+  flex: 1;
+}
+
+.save-button {
+  flex: 1;
   padding: 8px;
-  background-color: #2a6;
+  background-color: #007bff;
   border: none;
   color: white;
   border-radius: 4px;
@@ -762,20 +770,6 @@ a{
   font-weight: bold;
 }
 
-.reset-button {
-  flex: 1;
-  padding: 8px;
-  background-color: #f55;
-  border: none;
-  color: white;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.apply-button:hover {
-  background-color: #3b7;
-}
-
-.reset-button:hover {
-  background-color: #f66;
+.save-button:hover {
+  background-color: #0069d9;
 }
