@@ -8,7 +8,7 @@ const wss = new WebSocket.Server({ server });
 
 // 服务器配置
 const PORT = 8080;
-const UPDATE_INTERVAL = 100; // 100ms更新一次，即10Hz
+const UPDATE_INTERVAL = 50;
 
 // 存储所有WebSocket客户端
 const clients = new Set();
@@ -23,12 +23,12 @@ const trajectoryParams = {
         // 模型1：圆形轨迹
         centerLon: 116.4, // 北京经度
         centerLat: 39.9, // 北京纬度
-        radius: 0.01, // 轨迹半径（度）
+        radius: 0.02, // 轨迹半径（度）
         altitude: 500, // 高度（米）
-        speed: 0.02, // 角速度（弧度/秒）
+        speed: 0.05, // 角速度（弧度/秒）
         currentAngle: 0, // 当前角度
         // 姿态参数
-        yawSpeed: 0.5, // 偏航角速度（度/秒）
+        yawSpeed: 0.2, // 偏航角速度（度/秒）
         pitchAmplitude: 10, // 俯仰角幅度（度）
         rollAmplitude: 5, // 滚转角幅度（度）
     },
@@ -36,10 +36,10 @@ const trajectoryParams = {
         // 模型2：8字形轨迹
         centerLon: 116.4,
         centerLat: 40.0, // 纬度相差0.1度
-        radiusX: 0.015, // X方向半径
-        radiusY: 0.008, // Y方向半径
+        radiusX: 0.03, // X方向半径
+        radiusY: 0.015, // Y方向半径
         altitude: 600, // 高度稍高一些
-        speed: 0.015, // 角速度
+        speed: 0.04, // 角速度
         currentAngle: 0,
         // 姿态参数
         yawSpeed: -0.3, // 反向旋转
