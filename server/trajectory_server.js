@@ -23,7 +23,7 @@ const trajectoryParams = {
         // 模型1：圆形轨迹
         centerLon: 116.4, // 北京经度
         centerLat: 39.9, // 北京纬度
-        radius: 0.02, // 轨迹半径（度）
+        radius: 0.5, // 轨迹半径（度）
         altitude: 500, // 高度（米）
         speed: 0.05, // 角速度（弧度/秒）
         currentAngle: 0, // 当前角度
@@ -36,8 +36,8 @@ const trajectoryParams = {
         // 模型2：8字形轨迹
         centerLon: 116.4,
         centerLat: 40.0, // 纬度相差0.1度
-        radiusX: 0.03, // X方向半径
-        radiusY: 0.015, // Y方向半径
+        radiusX: 0.5, // 从0.03增加到0.15
+        radiusY: 0.085, // 从0.015增加到0.075
         altitude: 600, // 高度稍高一些
         speed: 0.04, // 角速度
         currentAngle: 0,
