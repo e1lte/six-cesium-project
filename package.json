@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server:trajectory": "node server/start_trajectory_server.js",
+    "server:bridge": "node server/websocket_bridge.js"
   },
   "dependencies": {
     "@types/cesium": "^1.70.4",
@@ -16,6 +18,7 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.1.1",
     "resium": "^1.18.3",
+    "ws": "^8.18.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
