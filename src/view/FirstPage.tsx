@@ -1129,7 +1129,11 @@ function FirstPage() {
                 <h1>飞行器可视化仿真软件</h1>
             </header>
 
-            <div className="manual-adjustment-panel">
+            <div
+                className={`manual-adjustment-panel ${
+                    showAttitudePanel ? "visible" : ""
+                }`}
+            >
                 <h4>调整模型姿态 - {activeModel}</h4>
                 <div className="adjustment-inputs">
                     <div>
@@ -1262,7 +1266,15 @@ function FirstPage() {
                 </nav>
 
                 <main style={{ height: "100%" }}>
-                    <Viewer ref={viewerRef} />
+                    <Viewer
+                        ref={viewerRef}
+                        timeline={false}
+                        animation={false}
+                        navigationHelpButton={false}
+                        baseLayerPicker={false}
+                        geocoder={false}
+                        homeButton={false}
+                    />
                 </main>
             </div>
             <div className="tool-line">
