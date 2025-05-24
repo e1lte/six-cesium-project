@@ -1076,10 +1076,65 @@ function FirstPage() {
     const [isRealTimeActive, setIsRealTimeActive] = useState(false);
     const websocketRef = useRef(null);
 
-    // 处理实时仿真
-    const handleStartRealTimeSimulation = modelEntities => {
+    // 在 FirstPage 组件中添加实时数据状态
+    const [realTimeData, setRealTimeData] = useState(null);
+    const [realTimeWebSocket, setRealTimeWebSocket] = useState(null);
+
+    // 修改 handleStartRealTimeSimulation 函数
+    const handleStartRealTimeSimulation = (
+        modelEntities,
+        websocket,
+        updateModelsFunction
+    ) => {
         setRealTimeModels(modelEntities);
         setIsRealTimeActive(true);
+        setRealTimeWebSocket(websocket);
+
+        // 设置WebSocket消息监听，同时处理模型更新和数据显示
+        if (websocket) {
+            websocket.onmessage = event => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log("📨 FirstPage收到WebSocket数据:", data);
+
+                    // 1. 首先更新模型位置（调用 RealTimeSimulationModal 的更新函数）
+                    if (updateModelsFunction) {
+                        updateModelsFunction(data);
+                    }
+
+                    // 2. 然后更新实时数据显示
+                    const currentTime = Date.now();
+                    const newRealTimeData = {
+                        model1: data.model1
+                            ? {
+                                  longitude: data.model1.longitude,
+                                  latitude: data.model1.latitude,
+                                  altitude: data.model1.altitude,
+                                  yaw: data.model1.yaw,
+                                  pitch: data.model1.pitch,
+                                  roll: data.model1.roll,
+                                  lastUpdate: currentTime,
+                              }
+                            : null,
+                        model2: data.model2
+                            ? {
+                                  longitude: data.model2.longitude,
+                                  latitude: data.model2.latitude,
+                                  altitude: data.model2.altitude,
+                                  yaw: data.model2.yaw,
+                                  pitch: data.model2.pitch,
+                                  roll: data.model2.roll,
+                                  lastUpdate: currentTime,
+                              }
+                            : null,
+                    };
+
+                    setRealTimeData(newRealTimeData);
+                } catch (error) {
+                    console.error("❌ FirstPage解析WebSocket数据失败:", error);
+                }
+            };
+        }
 
         // 设置摄像机到模型位置
         if (viewerRef.current?.cesiumElement && modelEntities.model1) {
@@ -1103,9 +1158,16 @@ function FirstPage() {
         }
     };
 
-    // 停止实时仿真
+    // 修改 stopRealTimeSimulation 函数
     const stopRealTimeSimulation = () => {
         setIsRealTimeActive(false);
+        setRealTimeData(null);
+
+        // 清除WebSocket监听
+        if (realTimeWebSocket) {
+            realTimeWebSocket.onmessage = null;
+            setRealTimeWebSocket(null);
+        }
 
         // 移除模型
         if (viewerRef.current?.cesiumElement) {
@@ -1320,7 +1382,162 @@ function FirstPage() {
                     复位
                 </button>
             </div>
-            <div id="dataPanel">Waiting for data...</div>
+            <div id="dataPanel" className={isRealTimeActive ? "active" : ""}>
+                {isRealTimeActive && realTimeData ? (
+                    <div className="realtime-data-display">
+                        <div className="panel-header">
+                            <h4>实时数据监控</h4>
+                            <button
+                                className="stop-simulation-btn"
+                                onClick={stopRealTimeSimulation}
+                                title="停止实时仿真"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {realTimeData.model1 && (
+                            <div className="model-data">
+                                <h5>模型1</h5>
+                                <div className="data-row">
+                                    <span>位置:</span>
+                                    <div className="position-data">
+                                        <span>
+                                            经度:{" "}
+                                            {realTimeData.model1.longitude?.toFixed(
+                                                6
+                                            )}
+                                            °
+                                        </span>
+                                        <span>
+                                            纬度:{" "}
+                                            {realTimeData.model1.latitude?.toFixed(
+                                                6
+                                            )}
+                                            °
+                                        </span>
+                                        <span>
+                                            高度:{" "}
+                                            {realTimeData.model1.altitude?.toFixed(
+                                                2
+                                            )}
+                                            m
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="data-row">
+                                    <span>姿态:</span>
+                                    <div className="attitude-data">
+                                        <span>
+                                            偏航:{" "}
+                                            {realTimeData.model1.yaw?.toFixed(
+                                                2
+                                            )}
+                                            °
+                                        </span>
+                                        <span>
+                                            俯仰:{" "}
+                                            {realTimeData.model1.pitch?.toFixed(
+                                                2
+                                            )}
+                                            °
+                                        </span>
+                                        <span>
+                                            横滚:{" "}
+                                            {realTimeData.model1.roll?.toFixed(
+                                                2
+                                            )}
+                                            °
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="data-row">
+                                    <span>
+                                        更新:{" "}
+                                        {realTimeData.model1.lastUpdate
+                                            ? new Date(
+                                                  realTimeData.model1.lastUpdate
+                                              ).toLocaleTimeString()
+                                            : "--"}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {realTimeData.model2 && (
+                            <div className="model-data">
+                                <h5>模型2</h5>
+                                <div className="data-row">
+                                    <span>位置:</span>
+                                    <div className="position-data">
+                                        <span>
+                                            经度:{" "}
+                                            {realTimeData.model2.longitude?.toFixed(
+                                                6
+                                            )}
+                                            °
+                                        </span>
+                                        <span>
+                                            纬度:{" "}
+                                            {realTimeData.model2.latitude?.toFixed(
+                                                6
+                                            )}
+                                            °
+                                        </span>
+                                        <span>
+                                            高度:{" "}
+                                            {realTimeData.model2.altitude?.toFixed(
+                                                2
+                                            )}
+                                            m
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="data-row">
+                                    <span>姿态:</span>
+                                    <div className="attitude-data">
+                                        <span>
+                                            偏航:{" "}
+                                            {realTimeData.model2.yaw?.toFixed(
+                                                2
+                                            )}
+                                            °
+                                        </span>
+                                        <span>
+                                            俯仰:{" "}
+                                            {realTimeData.model2.pitch?.toFixed(
+                                                2
+                                            )}
+                                            °
+                                        </span>
+                                        <span>
+                                            横滚:{" "}
+                                            {realTimeData.model2.roll?.toFixed(
+                                                2
+                                            )}
+                                            °
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="data-row">
+                                    <span>
+                                        更新:{" "}
+                                        {realTimeData.model2.lastUpdate
+                                            ? new Date(
+                                                  realTimeData.model2.lastUpdate
+                                              ).toLocaleTimeString()
+                                            : "--"}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="waiting-data">
+                        {isRealTimeActive ? "等待数据..." : "实时数据显示"}
+                    </div>
+                )}
+            </div>
             {showRealTimeModal && (
                 <RealTimeSimulationModal
                     isOpen={showRealTimeModal}

@@ -20,11 +20,15 @@ interface WebSocketData {
     message?: string;
 }
 
-interface Props {
+interface RealTimeSimulationModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onStartSimulation: (models: ModelEntities) => void;
-    viewerRef: React.MutableRefObject<{ cesiumElement?: Cesium.Viewer }>;
+    onStartSimulation: (
+        modelEntities: any,
+        websocket: WebSocket | null,
+        updateFunction: (data: any) => void
+    ) => void;
+    viewerRef: React.RefObject<CesiumComponentRef<Cesium.Viewer>>;
 }
 
 interface ModelState {
@@ -37,7 +41,28 @@ interface ModelEntities {
     model2: Cesium.Model | null;
 }
 
-const RealTimeSimulationModal: React.FC<Props> = ({
+interface RealTimeData {
+    model1: {
+        longitude: number;
+        latitude: number;
+        altitude: number;
+        yaw: number;
+        pitch: number;
+        roll: number;
+        lastUpdate: number;
+    } | null;
+    model2: {
+        longitude: number;
+        latitude: number;
+        altitude: number;
+        yaw: number;
+        pitch: number;
+        roll: number;
+        lastUpdate: number;
+    } | null;
+}
+
+const RealTimeSimulationModal: React.FC<RealTimeSimulationModalProps> = ({
     isOpen,
     onClose,
     onStartSimulation,
@@ -57,6 +82,17 @@ const RealTimeSimulationModal: React.FC<Props> = ({
     const [isConnected, setIsConnected] = useState(false);
     const websocketRef = useRef<WebSocket | null>(null);
     const wsUrlRef = useRef("ws://localhost:8080");
+
+    // 在组件内部添加数据更新回调状态
+    const [dataUpdateCallback, setDataUpdateCallback] = useState<
+        ((data: any) => void) | null
+    >(null);
+
+    // 在组件状态定义部分添加
+    const [isSimulationRunning, setIsSimulationRunning] = useState(false);
+
+    // 在组件状态定义部分添加
+    const [realTimeData, setRealTimeData] = useState<RealTimeData | null>(null);
 
     // 选择模型文件
     const handleModelSelect = (modelId: keyof ModelState) => {
@@ -216,7 +252,6 @@ const RealTimeSimulationModal: React.FC<Props> = ({
             return;
         }
 
-        // 检查是否是轨迹数据
         if (!data.model1 && !data.model2) {
             console.log("❌ 数据中没有模型信息");
             return;
@@ -240,31 +275,18 @@ const RealTimeSimulationModal: React.FC<Props> = ({
                 data.model1.altitude
             );
 
-            // 创建姿态四元数
-            const heading = Cesium.Math.toRadians(data.model1.yaw);
-            const pitch = Cesium.Math.toRadians(data.model1.pitch);
-            const roll = Cesium.Math.toRadians(data.model1.roll);
+            const hpr = new Cesium.HeadingPitchRoll(
+                Cesium.Math.toRadians(data.model1.yaw),
+                Cesium.Math.toRadians(data.model1.pitch),
+                Cesium.Math.toRadians(data.model1.roll)
+            );
 
-            const hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
-            const orientation = Cesium.Quaternion.fromHeadingPitchRoll(hpr);
-            const scale = new Cesium.Cartesian3(10.0, 10.0, 10.0);
+            const modelMatrix = Cesium.Transforms.headingPitchRollToFixedFrame(
+                position,
+                hpr
+            );
 
-            // 更新模型矩阵
-            const modelMatrix =
-                Cesium.Matrix4.fromTranslationQuaternionRotationScale(
-                    position,
-                    orientation,
-                    scale
-                );
-
-            if (Cesium.defined(modelMatrix)) {
-                modelEntitiesRef.current.model1.modelMatrix = modelMatrix;
-                console.log("✅ 模型1位置和姿态已更新");
-            } else {
-                console.log("❌ 模型1矩阵更新失败");
-            }
-        } else if (data.model1) {
-            console.log("⚠️ 模型1实体不存在，但收到了数据");
+            modelEntitiesRef.current.model1.modelMatrix = modelMatrix;
         }
 
         // 更新模型2
@@ -285,94 +307,84 @@ const RealTimeSimulationModal: React.FC<Props> = ({
                 data.model2.altitude
             );
 
-            const heading = Cesium.Math.toRadians(data.model2.yaw);
-            const pitch = Cesium.Math.toRadians(data.model2.pitch);
-            const roll = Cesium.Math.toRadians(data.model2.roll);
+            const hpr = new Cesium.HeadingPitchRoll(
+                Cesium.Math.toRadians(data.model2.yaw),
+                Cesium.Math.toRadians(data.model2.pitch),
+                Cesium.Math.toRadians(data.model2.roll)
+            );
 
-            const hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
-            const orientation = Cesium.Quaternion.fromHeadingPitchRoll(hpr);
-            const scale = new Cesium.Cartesian3(10.0, 10.0, 10.0);
+            const modelMatrix = Cesium.Transforms.headingPitchRollToFixedFrame(
+                position,
+                hpr
+            );
 
-            const modelMatrix =
-                Cesium.Matrix4.fromTranslationQuaternionRotationScale(
-                    position,
-                    orientation,
-                    scale
-                );
-
-            if (Cesium.defined(modelMatrix)) {
-                modelEntitiesRef.current.model2.modelMatrix = modelMatrix;
-                console.log("✅ 模型2位置和姿态已更新");
-            } else {
-                console.log("❌ 模型2矩阵更新失败");
-            }
-        } else if (data.model2) {
-            console.log("⚠️ 模型2实体不存在，但收到了数据");
+            modelEntitiesRef.current.model2.modelMatrix = modelMatrix;
         }
 
-        console.log("=== 模型位置更新完成 ===");
+        console.log("🔄 模型位置更新完成");
     };
 
     // 开始实时仿真
     const startRealTimeSimulation = async () => {
-        if (!isConnected) {
-            alert("请先连接到服务器");
-            return;
-        }
-
         if (!models.model1 && !models.model2) {
             alert("请至少选择一个模型");
             return;
         }
 
-        // 加载模型到场景
-        const loadSuccess = await loadModelsToScene();
-        if (!loadSuccess) return;
-
-        // 设置WebSocket消息处理函数
-        if (websocketRef.current) {
-            websocketRef.current.onmessage = (event: MessageEvent) => {
-                try {
-                    const data: WebSocketData = JSON.parse(event.data);
-
-                    // 打印原始WebSocket数据
-                    console.log("=== WebSocket收到原始数据 ===");
-                    console.log(JSON.stringify(data, null, 2));
-
-                    // 只处理轨迹数据，忽略其他类型的消息
-                    if (data.model1 || data.model2) {
-                        console.log("=== 检测到模型轨迹数据 ===");
-                        updateModelsPosition(data);
-                    } else if (data.type) {
-                        console.log("=== 收到服务器控制消息 ===");
-                        console.log(`消息类型: ${data.type}`);
-                        console.log(`消息内容: ${data.message}`);
-                    } else {
-                        console.log("=== 收到未知格式数据 ===");
-                        console.log(data);
-                    }
-                } catch (error) {
-                    console.error("=== 解析WebSocket消息时出错 ===");
-                    console.error("原始数据:", event.data);
-                    console.error("错误信息:", error);
-                }
-            };
-
-            // 发送开始仿真命令到服务器
-            websocketRef.current.send(
-                JSON.stringify({
-                    type: "start_simulation",
-                })
-            );
-
-            console.log("=== 已发送开始仿真命令到服务器 ===");
+        if (!isConnected) {
+            alert("请先连接WebSocket服务器");
+            return;
         }
 
-        // 调用父组件的开始仿真方法
-        onStartSimulation(modelEntitiesRef.current);
+        // 首先加载模型到场景
+        const modelsLoaded = await loadModelsToScene();
+        if (!modelsLoaded) {
+            return;
+        }
 
-        // 关闭弹窗
+        setIsSimulationRunning(true);
+
+        // 传递模型实体和更新函数给 FirstPage
+        onStartSimulation(
+            modelEntitiesRef.current,
+            websocketRef.current,
+            updateModelsPosition // 传递更新函数
+        );
+
+        // 关闭模态框
         onClose();
+    };
+
+    // 添加停止仿真函数
+    const stopRealTimeSimulation = () => {
+        setIsSimulationRunning(false);
+
+        // 清除WebSocket消息监听
+        if (websocketRef.current) {
+            websocketRef.current.onmessage = null;
+        }
+
+        // 清除数据更新回调
+        setDataUpdateCallback(null);
+
+        // 移除场景中的模型
+        if (viewerRef.current?.cesiumElement) {
+            const cesiumViewer = viewerRef.current.cesiumElement;
+
+            if (modelEntitiesRef.current.model1) {
+                cesiumViewer.scene.primitives.remove(
+                    modelEntitiesRef.current.model1
+                );
+                modelEntitiesRef.current.model1 = null;
+            }
+
+            if (modelEntitiesRef.current.model2) {
+                cesiumViewer.scene.primitives.remove(
+                    modelEntitiesRef.current.model2
+                );
+                modelEntitiesRef.current.model2 = null;
+            }
+        }
     };
 
     // 如果弹窗未打开，不渲染任何内容
@@ -495,15 +507,25 @@ const RealTimeSimulationModal: React.FC<Props> = ({
                     <button className="cancel-btn" onClick={onClose}>
                         取消
                     </button>
-                    <button
-                        className="start-btn"
-                        onClick={startRealTimeSimulation}
-                        disabled={
-                            !isConnected || (!models.model1 && !models.model2)
-                        }
-                    >
-                        开始实时仿真
-                    </button>
+                    {!isSimulationRunning ? (
+                        <button
+                            className="start-btn"
+                            onClick={startRealTimeSimulation}
+                            disabled={
+                                !isConnected ||
+                                (!models.model1 && !models.model2)
+                            }
+                        >
+                            开始实时仿真
+                        </button>
+                    ) : (
+                        <button
+                            className="stop-btn"
+                            onClick={stopRealTimeSimulation}
+                        >
+                            停止仿真
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

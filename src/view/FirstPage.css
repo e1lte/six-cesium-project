@@ -935,3 +935,367 @@ a{
 .file-input-label:hover {
     background-color: #e8e8e8;
 }
+
+/* 实时数据面板样式 - 添加到文件末尾 */
+
+/* 数据面板容器 */
+.data-panel {
+    position: fixed;
+    bottom: 60px;
+    right: 20px;
+    background: linear-gradient(135deg, rgba(0, 20, 40, 0.95), rgba(0, 10, 30, 0.95));
+    color: white;
+    padding: 15px;
+    border-radius: 12px;
+    font-family: 'Orbitron', 'Arial', sans-serif;
+    max-width: 400px;
+    min-width: 300px;
+    z-index: 1000;
+    box-shadow: 
+        0 0 20px rgba(0, 255, 255, 0.3),
+        0 4px 12px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 科技感边框动画 */
+.data-panel::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, 
+        #00ffff, #0080ff, #8000ff, #ff0080, 
+        #ff8000, #ffff00, #80ff00, #00ff80, #00ffff);
+    background-size: 400% 400%;
+    border-radius: 14px;
+    z-index: -1;
+    animation: gradientShift 3s ease infinite;
+}
+
+/* 内部发光效果 */
+.data-panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 70%);
+    border-radius: 12px;
+    pointer-events: none;
+}
+
+/* 关闭按钮 */
+.data-panel-close,
+.stop-simulation-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: radial-gradient(circle, rgba(255, 0, 0, 0.8), rgba(200, 0, 0, 0.6));
+    border: 2px solid #ff0000;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+    box-shadow: 
+        0 0 15px rgba(255, 0, 0, 0.8),
+        0 0 25px rgba(255, 0, 0, 0.4),
+        inset 0 0 10px rgba(255, 100, 100, 0.3);
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+    animation: redPulse 2s ease-in-out infinite;
+}
+
+.data-panel-close:hover,
+.stop-simulation-btn:hover {
+    background: radial-gradient(circle, rgba(255, 0, 0, 1), rgba(220, 0, 0, 0.8));
+    border-color: #ff3333;
+    box-shadow: 
+        0 0 25px rgba(255, 0, 0, 1),
+        0 0 35px rgba(255, 0, 0, 0.6),
+        0 0 45px rgba(255, 0, 0, 0.3),
+        inset 0 0 15px rgba(255, 150, 150, 0.5);
+    transform: scale(1.15);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 1);
+}
+
+.data-panel-close:active,
+.stop-simulation-btn:active {
+    transform: scale(0.95);
+    box-shadow: 
+        0 0 10px rgba(255, 0, 0, 0.8),
+        inset 0 0 8px rgba(150, 0, 0, 0.8);
+}
+
+/* 等待消息样式 */
+.waiting-message {
+    color: #00ffff;
+    font-size: 16px;
+    text-align: center;
+    padding: 15px;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* 实时数据容器 */
+.real-time-data {
+    font-size: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+/* 主标题 */
+.real-time-data h3 {
+    margin: 0 0 15px 0;
+    color: #00ffff;
+    font-size: 18px;
+    text-align: center;
+    border-bottom: 2px solid #00ffff;
+    padding-bottom: 8px;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 标题下方扫描线效果 */
+.real-time-data h3::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00ffff, transparent);
+    animation: scanLine 2s linear infinite;
+}
+
+/* 数据区块 */
+.data-section {
+    margin-bottom: 15px;
+    background: rgba(0, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 4px solid transparent;
+    border-right: 1px solid rgba(0, 255, 255, 0.2);
+    border-top: 1px solid rgba(0, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(5px);
+}
+
+/* 数据区块内部发光 */
+.data-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.6), transparent);
+    animation: topGlow 3s ease-in-out infinite;
+}
+
+/* 目标数据区块 */
+.target-data {
+    border-left-color: #66ccff;
+    box-shadow: inset 0 0 10px rgba(102, 204, 255, 0.1);
+}
+
+/* 导弹数据区块 */
+.missile-data {
+    border-left-color: #ff6666;
+    box-shadow: inset 0 0 10px rgba(255, 102, 102, 0.1);
+}
+
+/* 区块标题 */
+.data-section h4 {
+    margin: 0 0 10px 0;
+    color: #66ccff;
+    font-size: 16px;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(102, 204, 255, 0.5);
+    position: relative;
+}
+
+.missile-data h4 {
+    color: #ff6666;
+    text-shadow: 0 0 8px rgba(255, 102, 102, 0.5);
+}
+
+/* 数据行 */
+.data-row {
+    margin: 5px 0;
+    transition: all 0.3s ease;
+}
+
+.data-row:hover {
+    background: rgba(0, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 2px 6px;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+}
+
+/* 数据组 */
+.data-group {
+    margin: 10px 0;
+    line-height: 1.5;
+}
+
+/* 数据标签 */
+.data-label {
+    color: #00ffff;
+    font-weight: bold;
+    margin-right: 8px;
+    display: inline-block;
+    min-width: 50px;
+    font-size: 14px;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+}
+
+/* 数据值 */
+.data-value {
+    color: #ffffff;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .data-panel {
+        right: 10px;
+        bottom: 50px;
+        max-width: 280px;
+        min-width: 250px;
+        padding: 12px;
+    }
+    
+    .real-time-data h3 {
+        font-size: 16px;
+    }
+    
+    .data-section h4 {
+        font-size: 14px;
+    }
+    
+    .data-value {
+        font-size: 12px;
+    }
+    
+    .data-panel-close {
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+    }
+}
+
+/* 动画效果 */
+.data-panel {
+    animation: slideInFromRight 0.5s ease-out, panelGlow 4s ease-in-out infinite;
+}
+
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes gradientShift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+    50% {
+        opacity: 0.7;
+        text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+    }
+}
+
+@keyframes scanLine {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+@keyframes topGlow {
+    0%, 100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+@keyframes panelGlow {
+    0%, 100% {
+        box-shadow: 
+            0 0 20px rgba(0, 255, 255, 0.3),
+            0 4px 12px rgba(0, 0, 0, 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    50% {
+        box-shadow: 
+            0 0 30px rgba(0, 255, 255, 0.5),
+            0 4px 12px rgba(0, 0, 0, 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* 数据更新时的闪烁效果 */
+.data-value:hover {
+    background-color: rgba(0, 255, 255, 0.1);
+    border-radius: 3px;
+    padding: 2px 4px;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+@keyframes redPulse {
+    0%, 100% {
+        box-shadow: 
+            0 0 15px rgba(255, 0, 0, 0.8),
+            0 0 25px rgba(255, 0, 0, 0.4),
+            inset 0 0 10px rgba(255, 100, 100, 0.3);
+    }
+    50% {
+        box-shadow: 
+            0 0 20px rgba(255, 0, 0, 1),
+            0 0 35px rgba(255, 0, 0, 0.6),
+            0 0 45px rgba(255, 0, 0, 0.2),
+            inset 0 0 15px rgba(255, 150, 150, 0.4);
+    }
+}
