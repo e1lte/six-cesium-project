@@ -699,6 +699,21 @@ function FirstPage() {
         setShowModelTypeModal(true);
     };
 
+    const handleSelectLocalModel = () => {
+        setShowModelModal(false);
+        // 创建文件输入元素
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".glb,.gltf";
+        input.onchange = e => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+                loadModel(file, activeModel);
+            }
+        };
+        input.click();
+    };
+
     const handleSelectModelType = async modelType => {
         setShowModelTypeModal(false);
 
@@ -1246,7 +1261,7 @@ function FirstPage() {
                     </div>
                 </nav>
 
-                <main>
+                <main style={{ height: "100%" }}>
                     <Viewer ref={viewerRef} />
                 </main>
             </div>
