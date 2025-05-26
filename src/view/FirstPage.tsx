@@ -6,10 +6,16 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 import { ak, BEIJING_POSITION, SHANGHAI_POSITION } from "../config/data.js";
 import * as XLSX from "xlsx";
 // import { RealTimeTrajectory } from "./RealTimeTrajectory.js";
+import ClassComponent from "./ClassComponent.js";
+import { CesiumComponentRef } from "resium";
+import { performanceOptimizer } from "../utils/performanceOptimization";
+import LCPOptimizer from "../components/LCPOptimizer";
+import PerformanceDashboard from "../components/PerformanceDashboard";
+
+// 移除懒加载，直接导入模态框组件
 import SimulationConfigModal from "./SimulationConfigModal.tsx";
 import { ModelSelectionModal } from "./ModelSelectionModal.js";
 import { ModelTypeModal } from "./ModelType.js";
-import ClassComponent from "./ClassComponent.js";
 import RealTimeSimulationModal from "./RealTimeSimulationModal.tsx";
 
 function FirstPage() {
@@ -284,12 +290,21 @@ function FirstPage() {
 
     // 在组件初始化时加载保存的姿态
     useEffect(() => {
+        // 加载保存的姿态校正
         const savedOffsets = {};
         for (let i = 1; i <= 8; i++) {
             const modelId = `model${i}`;
             savedOffsets[modelId] = loadSavedAdjustments(modelId);
         }
         setOffsets(savedOffsets);
+
+        // 初始化性能优化器
+        performanceOptimizer.init();
+
+        return () => {
+            // 清理性能优化器
+            performanceOptimizer.cleanup();
+        };
     }, []);
 
     const loadModel = async (file, modelId = "model1") => {
@@ -784,7 +799,6 @@ function FirstPage() {
             initialPos.y || initialPos.latitude,
             initialPos.z || (modelType === "target" ? 500 : 1000)
         );
-
         model.modelMatrix = Cesium.Matrix4.fromTranslation(cartesianPos);
     };
 
@@ -1069,15 +1083,17 @@ function FirstPage() {
 
     // 在FirstPage组件中添加状态
     const [showRealTimeModal, setShowRealTimeModal] = useState(false);
+    const [isRealTimeActive, setIsRealTimeActive] = useState(false);
+    const [realTimeData, setRealTimeData] = useState(null);
     const [realTimeModels, setRealTimeModels] = useState({
         model1: null,
         model2: null,
     });
-    const [isRealTimeActive, setIsRealTimeActive] = useState(false);
+    const [showPerformanceDashboard, setShowPerformanceDashboard] =
+        useState(false);
     const websocketRef = useRef(null);
 
     // 在 FirstPage 组件中添加实时数据状态
-    const [realTimeData, setRealTimeData] = useState(null);
     const [realTimeWebSocket, setRealTimeWebSocket] = useState(null);
 
     // 修改 handleStartRealTimeSimulation 函数
@@ -1187,9 +1203,11 @@ function FirstPage() {
 
     return (
         <div className="container">
-            <header>
-                <h1>飞行器可视化仿真软件</h1>
-            </header>
+            <LCPOptimizer>
+                <header>
+                    <h1>飞行器可视化仿真软件</h1>
+                </header>
+            </LCPOptimizer>
 
             <div
                 className={`manual-adjustment-panel ${
@@ -1381,6 +1399,17 @@ function FirstPage() {
                 <button className="tool-btn" onClick={resetOrientation}>
                     复位
                 </button>
+                <button
+                    className={`tool-btn ${
+                        showPerformanceDashboard ? "active" : ""
+                    }`}
+                    onClick={() =>
+                        setShowPerformanceDashboard(!showPerformanceDashboard)
+                    }
+                    title="性能监控"
+                >
+                    性能
+                </button>
             </div>
             <div id="dataPanel" className={isRealTimeActive ? "active" : ""}>
                 {isRealTimeActive && realTimeData ? (
@@ -1544,6 +1573,14 @@ function FirstPage() {
                     onClose={() => setShowRealTimeModal(false)}
                     onStartSimulation={handleStartRealTimeSimulation}
                     viewerRef={viewerRef}
+                />
+            )}
+            {showPerformanceDashboard && (
+                <PerformanceDashboard
+                    isVisible={showPerformanceDashboard}
+                    onToggle={() =>
+                        setShowPerformanceDashboard(!showPerformanceDashboard)
+                    }
                 />
             )}
         </div>
