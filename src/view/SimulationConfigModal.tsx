@@ -119,7 +119,8 @@ const SimulationConfigModal = ({ onClose, onConfirm }) => {
     return (
         <div className="config-modal-overlay">
             <div className="config-modal">
-                <h2>仿真配置</h2>
+                {/* <h2>仿真配置</h2> */}
+                                    <h1 style={{width:'100%' ,display:"flex",justifyContent:'space-around',alignItems:'center'}}><div style={{width:'100px',height:'100px',padding:'20px',backgroundColor:'white'}}><img style={{width:'60px'}} src="./public/xidian.jpg" alt="" /></div><h5 style={{color:'white'}}> 仿真配置</h5><img style={{width:'100px', height:'100px'}} src="./public/gs.jpg" alt="" /></h1>
                 <button className="close-btn" onClick={onClose}>
                     ×
                 </button>

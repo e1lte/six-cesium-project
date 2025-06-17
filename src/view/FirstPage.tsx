@@ -1205,7 +1205,11 @@ function FirstPage() {
         <div className="container">
             <LCPOptimizer>
                 <header>
-                    <h1>飞行器可视化仿真软件</h1>
+                    {/* <div style={{width:'100px'}}><img src="./public/xidian.jpg" alt="" /></div> */}
+                    <h1 style={{width:'100%' ,display:"flex",justifyContent:'space-between',alignItems:'center'}}><img style={{width:'60px'}} src="./public/xidian.jpg" alt="" /><span> 飞行器可视化仿真软件</span><img style={{width:'70px'}} src="./public/gs.jpg" alt="" /></h1>
+                    {/* <div style={{width:'100px'}}><img src="./public/gs.jpg" alt="" /></div> */}
+                    
+                                        {/* <h1>飞行器可视化仿真软件</h1> */}
                 </header>
             </LCPOptimizer>
 
